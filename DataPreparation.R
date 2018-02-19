@@ -19,7 +19,7 @@ library(MASS)
 ######################################################################################################
 # Function for computing Average Consumption Per day from consumption data
 ######################################################################################################
-getPerDayConsumption <- function(df){
+getPerDayConsumption = function(df){
   # compute the unique df
   #df = unique(df)
   df = transform(df,
@@ -78,7 +78,7 @@ getPerDayConsumption <- function(df){
   return(DayWiseConsumption)
 }
 
-checkForNAColumns <- function(df){
+checkForNAColumns=function(df){
   named_cols = colSums(is.na(df))/nrow(df)
   for(i in 1:length(named_cols)){
     if(named_cols[i] != 0){
@@ -88,17 +88,25 @@ checkForNAColumns <- function(df){
   rm(named_cols,i)
 }
 
-getEventDurations <- function(df, meterconsumerdf){
+getEventDurations = function(df, meterconsumerdf){
   df$EVENTDATE = gsub('\\s+','',df$EVENTDATE)
   df$EVENTTIME = gsub('\\s+','',df$EVENTTIME)
   
+  meterconsumerdf <- transform(meterconsumerdf,
+                     ValidFrom = as.Date(ValidFrom, "%d-%m-%Y"),
+                     ValidTo = as.Date(ValidTo, "%d-%m-%Y"))
+  
   df = transform(df,
-                 DATETIMESTAMP = strptime(DATETIMESTAMP, "%Y-%m-%d %H:%M:%S"),
                  EVENTDATE = as.Date(EVENTDATE, "%d-%b-%Y"))
   
-  df = merge(df,
-             meterconsumerdf,
-             by = "METERNO", all.x = TRUE)
+  df = full_join(df,meterconsumerdf) %>% 
+    dplyr::mutate(condition = ((EVENTDATE >= ValidFrom) & (EVENTDATE <= ValidTo))) %>% 
+    dplyr::filter(condition == "TRUE") %>% 
+    dplyr::select(CONSUMER_FEEDERID, CODE, EVENTDATE, EVENTTIME, STATUS, EVENTDESC,
+           METERNO, DATETIMESTAMP, ConsumerNumber)
+  
+  df = transform(df,
+                 DATETIMESTAMP = strptime(DATETIMESTAMP, "%Y-%m-%d %H:%M:%S"))
   
   # Compute the suspicious event duration
   error_idx = df$EVENTTIME == "00:00AM"
@@ -213,7 +221,7 @@ getEventDurations <- function(df, meterconsumerdf){
 }
 
 # Compute the monthly recorded peak demand
-getMonthlyPeakDemand <- function(df){
+getMonthlyPeakDemand = function(df){
   # Remove the duplicate entries
   #df = unique(df)
   
@@ -281,7 +289,7 @@ getMonthlyPeakDemand <- function(df){
   return(MonthlyBilledDemandDF)
 }
 
-getMonthlySanctionedLoad <- function(df){
+getMonthlySanctionedLoad = function(df){
   SanctionedLoadDF = data.frame(0,as.Date('2017-12-31','%Y-%m-%d'),0)
   names(SanctionedLoadDF) = c("ConsumerNumber","MonthofConsumption","Load")
   
@@ -311,7 +319,7 @@ getMonthlySanctionedLoad <- function(df){
   return(SanctionedLoadDF)
 }
 
-computeLF <- function(df){
+computeLF = function(df){
   
   # load lubridate for computing number of days in a month
   library(lubridate)
@@ -323,13 +331,10 @@ computeLF <- function(df){
   
 }
 
-
 MeterConsumerNumberDF = read.csv("Data//PROCESSED//MeterMasterDF.csv", header = TRUE, stringsAsFactors = FALSE)
-MeterConsumerNumberDF = MeterConsumerNumberDF[,c("ConsumerNumber","METERNO")]
+#MeterConsumerNumberDF = MeterConsumerNumberDF[,c("ConsumerNumber","METERNO")]
 
-#source("DataPreparation.R")
-dataconsumption = read.csv("Data//PROCESSED//ConsumptionDF.csv", header = TRUE, stringsAsFactors = FALSE)
-MonthlyConsumptionDF = getPerDayConsumption(dataconsumption)
+MonthlyConsumptionDF = getPerDayConsumption(read.csv("Data//PROCESSED//ConsumptionDF.csv", header = TRUE, stringsAsFactors = FALSE))
 MonthlyConsumptionDF = MonthlyConsumptionDF[,c("ConsumerNumber","ConsumptionDate",
                                                "consumption_KVAH")]
 library(dplyr)
@@ -340,9 +345,8 @@ MonthlyConsumptionDF = MonthlyConsumptionDF %>%
   dplyr::group_by(ConsumerNumber,MonthofConsumption) %>%
   dplyr::summarise(consumption_KVAH = sum(consumption_KVAH))
 
-#source("DataPreparation.R")
-dataEvent = read.csv("Data//PROCESSED//SuspiciousEventDF.csv", header = TRUE, stringsAsFactors = FALSE)
-SuspiciousEventDuration = getEventDurations(dataEvent,MeterConsumerNumberDF)
+SuspiciousEventDuration = getEventDurations(read.csv("Data//PROCESSED//SuspiciousEventDF.csv", header = TRUE, stringsAsFactors = FALSE),
+                                            MeterConsumerNumberDF)
 
-write.csv(MonthlyConsumptionDF, "Data//PROCESSED//MonthlyConsumptionStandardisedDF.csv", row.names = FALSE)
-write.csv(SuspiciousEventDuration, "Data//PROCESSED//SuspiciousEventDuration.csv", row.names = FALSE)
+write.csv(MonthlyConsumptionDF, "MonthlyConsumptionStandardisedDF.csv", row.names = False)
+write.csv(SuspiciousEventDuration, "SuspiciousEventDuration.csv", row.names = False)
