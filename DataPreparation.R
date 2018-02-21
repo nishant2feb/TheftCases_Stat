@@ -89,12 +89,15 @@ checkForNAColumns=function(df){
 }
 
 getEventDurations = function(df, meterconsumerdf){
+  #meterconsumerdf = read.csv("MeterMasterDF.csv", header = TRUE, stringsAsFactors = FALSE)
+  #df = read.csv("SuspiciousEventDF.csv", header = TRUE, stringsAsFactors = FALSE)
+  
   df$EVENTDATE = gsub('\\s+','',df$EVENTDATE)
   df$EVENTTIME = gsub('\\s+','',df$EVENTTIME)
   
   meterconsumerdf <- transform(meterconsumerdf,
-                     ValidFrom = as.Date(ValidFrom, "%d-%m-%Y"),
-                     ValidTo = as.Date(ValidTo, "%d-%m-%Y"))
+                     ValidFrom = as.Date(ValidFrom, "%d-%b-%Y"),
+                     ValidTo = as.Date(ValidTo, "%d-%b-%Y"))
   
   df = transform(df,
                  EVENTDATE = as.Date(EVENTDATE, "%d-%b-%Y"))
@@ -331,10 +334,10 @@ computeLF = function(df){
   
 }
 
-MeterConsumerNumberDF = read.csv("Data//PROCESSED//MeterMasterDF.csv", header = TRUE, stringsAsFactors = FALSE)
+MeterConsumerNumberDF = read.csv("MeterMasterDF.csv", header = TRUE, stringsAsFactors = FALSE)
 #MeterConsumerNumberDF = MeterConsumerNumberDF[,c("ConsumerNumber","METERNO")]
 
-MonthlyConsumptionDF = getPerDayConsumption(read.csv("Data//PROCESSED//ConsumptionDF.csv", header = TRUE, stringsAsFactors = FALSE))
+MonthlyConsumptionDF = getPerDayConsumption(read.csv("ConsumptionDF.csv", header = TRUE, stringsAsFactors = FALSE))
 MonthlyConsumptionDF = MonthlyConsumptionDF[,c("ConsumerNumber","ConsumptionDate",
                                                "consumption_KVAH")]
 library(dplyr)
@@ -345,8 +348,8 @@ MonthlyConsumptionDF = MonthlyConsumptionDF %>%
   dplyr::group_by(ConsumerNumber,MonthofConsumption) %>%
   dplyr::summarise(consumption_KVAH = sum(consumption_KVAH))
 
-SuspiciousEventDuration = getEventDurations(read.csv("Data//PROCESSED//SuspiciousEventDF.csv", header = TRUE, stringsAsFactors = FALSE),
+SuspiciousEventDuration = getEventDurations(read.csv("SuspiciousEventDF.csv", header = TRUE, stringsAsFactors = FALSE),
                                             MeterConsumerNumberDF)
 
-write.csv(MonthlyConsumptionDF, "MonthlyConsumptionStandardisedDF.csv", row.names = False)
-write.csv(SuspiciousEventDuration, "SuspiciousEventDuration.csv", row.names = False)
+write.csv(MonthlyConsumptionDF, "MonthlyConsumptionStandardisedDF.csv", row.names = FALSE)
+write.csv(SuspiciousEventDuration, "SuspiciousEventDuration.csv", row.names = FALSE)
